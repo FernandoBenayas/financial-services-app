@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ skill.display_name }} — Financial Services AI{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/vertical/{{ skill.vertical }}">{{ meta.get('label', skill.vertical_display) }}</a></li>
+        <li class="breadcrumb-item active">{{ skill.display_name }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <!-- Input Panel -->
+    <div class="col-lg-5 col-xl-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+            <div class="card-header text-white" style="background: {{ meta.get('color', '#333') }};">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-{{ meta.get('icon', 'cog') }} me-2"></i>
+                    <strong>{{ skill.display_name }}</strong>
+                    {% if skill.command %}
+                    <code class="ms-auto text-light opacity-75">{{ skill.command }}</code>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">{{ skill.description[:200] }}</p>
+
+                <form id="skill-form" onsubmit="return false;">
+                    <!-- Provider & Model Selection -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Provider</label>
+                            <select class="form-select form-select-sm" id="chat-provider">
+                                <option value="anthropic">Anthropic</option>
+                                <option value="mistral">Mistral</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Model</label>
+                            <select class="form-select form-select-sm" id="chat-model">
+                                {% for m in models.get('anthropic', []) %}
+                                <option value="{{ m }}" data-provider="anthropic">{{ m.split('-')[1]|title }} {{ m.split('-')[2] if m.split('-')|length > 2 else '' }}</option>
+                                {% endfor %}
+                                {% for m in models.get('mistral', []) %}
+                                <option value="{{ m }}" data-provider="mistral" class="d-none">{{ m.replace('-', ' ')|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- User Input -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Your Request</label>
+                        <textarea class="form-control" id="user-message" rows="6"
+                                  placeholder="{{ input_hint }}"></textarea>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">
+                            <i class="fas fa-paperclip me-1"></i>Attach Document (optional)
+                        </label>
+                        <input type="file" class="form-control form-control-sm" id="file-upload"
+                               accept=".txt,.csv,.json,.md,.xlsx,.pdf">
+                        <div class="form-text">Text/CSV/JSON files are read directly. For best results, paste content into the text area.</div>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="button" class="btn w-100 text-white" id="submit-btn"
+                            style="background: {{ meta.get('color', '#333') }};"
+                            data-skill-id="{{ skill.skill_id }}"
+                            onclick="submitSkill('{{ skill.skill_id }}')">
+                        <i class="fas fa-paper-plane me-2"></i>Generate
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="col-lg-7 col-xl-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-light d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-file-alt me-2"></i>Output</span>
+                <div>
+                    <button class="btn btn-outline-light btn-sm me-1" onclick="copyOutput()" title="Copy to clipboard">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" onclick="clearOutput()" title="Clear">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body output-panel" id="output-panel">
+                <div class="text-center text-muted py-5" id="output-placeholder">
+                    <i class="fas fa-lightbulb fa-3x mb-3 opacity-50"></i>
+                    <p>Enter your request and click <strong>Generate</strong> to get started.</p>
+                    <p class="small">The AI will follow the <em>{{ skill.display_name }}</em> workflow from the financial services skill library.</p>
+                </div>
+                <div id="output-content" class="d-none markdown-body"></div>
+                <div id="output-loading" class="d-none text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Generating analysis...</p>
+                </div>
+                <div id="output-error" class="d-none alert alert-danger"></div>
+            </div>
+            <div class="card-footer bg-dark text-muted small d-none" id="output-meta">
+                <i class="fas fa-info-circle me-1"></i>
+                <span id="output-meta-text"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

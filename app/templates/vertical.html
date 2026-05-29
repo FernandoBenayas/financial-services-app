@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.label }} — Financial Services AI{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+        <li class="breadcrumb-item active">{{ meta.label }}</li>
+    </ol>
+</nav>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center mb-3">
+            <div class="icon-circle icon-circle-lg me-3" style="background: {{ meta.color }}20; color: {{ meta.color }};">
+                <i class="fas fa-{{ meta.icon }} fa-2x"></i>
+            </div>
+            <div>
+                <h2 class="mb-0">{{ meta.label }}</h2>
+                <p class="text-muted mb-0">{{ meta.description }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for skill in skills %}
+    <div class="col-lg-4 col-md-6">
+        <div class="card skill-card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="card-title mb-0">{{ skill.display_name }}</h6>
+                    {% if skill.command %}
+                    <code class="small text-nowrap ms-2">{{ skill.command }}</code>
+                    {% endif %}
+                </div>
+                <p class="card-text text-muted small mb-2">{{ skill.description[:150] }}{% if skill.description|length > 150 %}…{% endif %}</p>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="/skill/{{ skill.skill_id }}" class="btn btn-sm w-100"
+                   style="background: {{ meta.color }}; color: white;">
+                    <i class="fas fa-play me-1"></i>Launch
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
