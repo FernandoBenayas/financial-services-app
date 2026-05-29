@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Financial Services AI Workbench{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container">
+        <h1 class="display-5 fw-bold text-white mb-3">
+            <i class="fas fa-chart-line me-2"></i>Financial Services AI Workbench
+        </h1>
+        <p class="lead text-white-50 mb-4">
+            {{ total_skills }} professional tools powered by real-time market data and AI analysis
+        </p>
+        <div class="row g-3 mb-2">
+            <div class="col-auto">
+                <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                    <i class="fas fa-tools me-1"></i>{{ total_skills }} Skills
+                </span>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                    <i class="fas fa-layer-group me-1"></i>{{ verticals|length }} Verticals
+                </span>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                    <i class="fas fa-globe me-1"></i>Live Market Data
+                </span>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                    <i class="fas fa-robot me-1"></i>Anthropic + Mistral
+                </span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container py-5">
+    <div class="row g-4">
+        {% for vid, vmeta in verticals.items() %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card vertical-card h-100 border-0 shadow-sm" style="border-top: 4px solid {{ vmeta.color }} !important;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-circle me-3" style="background: {{ vmeta.color }}15; color: {{ vmeta.color }};">
+                            <i class="fas fa-{{ vmeta.icon }}"></i>
+                        </div>
+                        <h5 class="card-title mb-0">{{ vmeta.label }}</h5>
+                    </div>
+                    <p class="card-text text-muted small">{{ vmeta.description }}</p>
+
+                    {% set skills = by_vertical.get(vid, []) %}
+                    <div class="mb-3">
+                        {% for skill in skills[:4] %}
+                        <a href="/skill/{{ skill.skill_id }}" class="badge skill-badge me-1 mb-1 text-decoration-none"
+                           style="background: {{ vmeta.color }}20; color: {{ vmeta.color }}; border: 1px solid {{ vmeta.color }}40;">
+                            {{ skill.display_name }}
+                        </a>
+                        {% endfor %}
+                        {% if skills|length > 4 %}
+                        <span class="badge bg-secondary">+{{ skills|length - 4 }} more</span>
+                        {% endif %}
+                    </div>
+
+                    <a href="/vertical/{{ vid }}" class="btn btn-sm text-white w-100"
+                       style="background: {{ vmeta.color }};">
+                        View All {{ skills|length }} Tools <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body p-4">
+                    <h5><i class="fas fa-info-circle me-2 text-primary"></i>How It Works</h5>
+                    <div class="row mt-3">
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="fs-2 text-primary mb-2"><i class="fas fa-mouse-pointer"></i></div>
+                            <h6>1. Choose a Tool</h6>
+                            <small class="text-muted">Select from {{ total_skills }} professional financial tools</small>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="fs-2 text-primary mb-2"><i class="fas fa-keyboard"></i></div>
+                            <h6>2. Fill in Details</h6>
+                            <small class="text-muted">Enter company tickers, parameters, and context</small>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="fs-2 text-primary mb-2"><i class="fas fa-globe"></i></div>
+                            <h6>3. Auto-Fetch Data</h6>
+                            <small class="text-muted">Real-time financials, news, and market data gathered automatically</small>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <div class="fs-2 text-primary mb-2"><i class="fas fa-file-alt"></i></div>
+                            <h6>4. Get Analysis</h6>
+                            <small class="text-muted">AI generates institutional-quality reports and models</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

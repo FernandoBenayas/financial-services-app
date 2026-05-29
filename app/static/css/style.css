@@ -1,0 +1,146 @@
+:root {
+    --fs-primary: #1a5276;
+    --fs-dark: #0d2137;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f6fa;
+}
+
+/* Hero */
+.hero-section {
+    background: linear-gradient(135deg, var(--fs-dark) 0%, var(--fs-primary) 60%, #2e86c1 100%);
+    padding: 3rem 0 2.5rem;
+}
+
+/* Cards */
+.vertical-card, .skill-card {
+    transition: transform 0.15s, box-shadow 0.15s;
+    border-radius: 0.5rem;
+}
+.vertical-card:hover, .skill-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,.1) !important;
+}
+
+/* Icon circles */
+.icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.icon-circle-lg {
+    width: 56px;
+    height: 56px;
+    font-size: 1.3rem;
+}
+
+/* Skill badges */
+.skill-badge {
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.3em 0.6em;
+}
+
+/* Sticky input panel */
+.sticky-panel {
+    position: sticky;
+    top: 70px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+}
+
+/* Ticker info */
+.ticker-info {
+    font-size: 0.78rem;
+}
+
+/* Output panel */
+#output-panel {
+    scrollbar-width: thin;
+}
+#output-panel::-webkit-scrollbar { width: 6px; }
+#output-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+/* Markdown body */
+.markdown-body {
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+.markdown-body h1 { font-size: 1.5rem; margin-top: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
+.markdown-body h2 { font-size: 1.3rem; margin-top: 1.3rem; color: var(--fs-primary); }
+.markdown-body h3 { font-size: 1.1rem; margin-top: 1.1rem; }
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.markdown-body th, .markdown-body td {
+    border: 1px solid #dee2e6;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+}
+.markdown-body th { background: #f8f9fa; font-weight: 600; }
+.markdown-body tr:nth-child(even) { background: #fafbfc; }
+.markdown-body code {
+    background: #f1f3f5;
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+.markdown-body pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1rem;
+    border-radius: 0.4rem;
+    overflow-x: auto;
+}
+.markdown-body pre code { background: none; color: inherit; padding: 0; }
+.markdown-body blockquote {
+    border-left: 4px solid var(--fs-primary);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    background: #f8f9fa;
+    color: #555;
+}
+.markdown-body ul, .markdown-body ol { padding-left: 1.5rem; }
+.markdown-body strong { color: #2c3e50; }
+
+/* Streaming cursor */
+.streaming-cursor::after {
+    content: "▊";
+    animation: blink 0.8s step-end infinite;
+    color: var(--fs-primary);
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Data step indicators */
+.data-step {
+    padding: 0.25rem 0;
+    display: flex;
+    align-items: center;
+}
+.data-step .step-icon { width: 20px; text-align: center; margin-right: 0.5rem; }
+.data-step.done .step-icon { color: #28a745; }
+.data-step.active .step-icon { color: #007bff; }
+
+/* Form focus */
+.form-control:focus, .form-select:focus {
+    border-color: var(--fs-primary);
+    box-shadow: 0 0 0 0.15rem rgba(26, 82, 118, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .sticky-panel {
+        position: static;
+        max-height: none;
+    }
+}
