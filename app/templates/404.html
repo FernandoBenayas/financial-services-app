@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Not Found{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+    <h1 class="display-1 text-muted">404</h1>
+    <p class="lead">{{ message or "Page not found" }}</p>
+    <a href="/" class="btn btn-primary">Back to Dashboard</a>
+</div>
+{% endblock %}
