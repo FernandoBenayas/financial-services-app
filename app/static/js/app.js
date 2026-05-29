@@ -1,136 +1,167 @@
-/* Financial Services AI Workbench — Client JS */
+/* Financial Services AI Workbench — client-side logic */
 
-// ── State ──
-let currentProvider = localStorage.getItem("fs-provider") || "anthropic";
-let currentModel = localStorage.getItem("fs-model") || "";
 let isStreaming = false;
 let abortController = null;
 
-// ── Init ──
+/* ── Initialization ── */
+
 document.addEventListener("DOMContentLoaded", () => {
     restoreSettings();
-    setupProviderToggle();
 });
 
 function restoreSettings() {
-    const providerSel = document.getElementById("global-provider");
-    const chatProvider = document.getElementById("chat-provider");
-    if (providerSel) providerSel.value = currentProvider;
-    if (chatProvider) {
-        chatProvider.value = currentProvider;
-        filterModels(currentProvider);
+    const provider = localStorage.getItem("fs_provider") || "anthropic";
+    const providerSel = document.getElementById("provider-select");
+    if (providerSel) {
+        providerSel.value = provider;
+        filterModels(provider);
+        const savedModel = localStorage.getItem("fs_model_" + provider);
+        if (savedModel) {
+            const modelSel = document.getElementById("model-select");
+            if (modelSel) modelSel.value = savedModel;
+        }
     }
-    updateProviderBadge();
+    updateProviderBadge(provider);
 }
 
-function setupProviderToggle() {
-    const chatProvider = document.getElementById("chat-provider");
-    if (!chatProvider) return;
-    chatProvider.addEventListener("change", (e) => {
-        currentProvider = e.target.value;
-        filterModels(currentProvider);
-        updateProviderBadge();
-    });
+function onProviderChange() {
+    const provider = document.getElementById("provider-select").value;
+    filterModels(provider);
+    localStorage.setItem("fs_provider", provider);
+    updateProviderBadge(provider);
 }
 
 function filterModels(provider) {
-    const modelSel = document.getElementById("chat-model");
-    if (!modelSel) return;
-    Array.from(modelSel.options).forEach((opt) => {
-        const optProvider = opt.dataset.provider;
-        if (optProvider === provider) {
-            opt.classList.remove("d-none");
-            opt.disabled = false;
+    const sel = document.getElementById("model-select");
+    if (!sel) return;
+    let firstVisible = null;
+    for (const opt of sel.options) {
+        const show = opt.dataset.provider === provider;
+        opt.style.display = show ? "" : "none";
+        if (show && !firstVisible) firstVisible = opt;
+    }
+    if (firstVisible) sel.value = firstVisible.value;
+}
+
+function updateProviderBadge(provider) {
+    const badge = document.getElementById("provider-badge");
+    if (!badge) return;
+    if (provider === "anthropic") {
+        badge.textContent = "Anthropic";
+        badge.className = "badge bg-success me-2";
+    } else {
+        badge.textContent = "Mistral";
+        badge.className = "badge bg-warning text-dark me-2";
+    }
+}
+
+/* ── Ticker Lookup ── */
+
+async function lookupTicker(fieldName) {
+    const input = document.getElementById("field-" + fieldName);
+    const infoDiv = document.getElementById("ticker-info-" + fieldName);
+    if (!input || !infoDiv) return;
+
+    const ticker = input.value.trim().toUpperCase();
+    if (!ticker) return;
+
+    infoDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Looking up…';
+
+    try {
+        const resp = await fetch("/api/lookup_ticker", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker }),
+        });
+        const data = await resp.json();
+        if (data.error) {
+            infoDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>' + data.error + '</span>';
         } else {
-            opt.classList.add("d-none");
-            opt.disabled = true;
+            const mcap = data.market_cap ? formatNumber(data.market_cap) : "N/A";
+            infoDiv.innerHTML =
+                '<span class="text-success"><i class="fas fa-check-circle me-1"></i></span>' +
+                '<strong>' + data.name + '</strong> | ' +
+                data.sector + ' | ' + data.industry +
+                ' | Mkt Cap: $' + mcap;
+
+            // Auto-fill company name field if empty
+            const nameField = document.getElementById("field-company_name");
+            if (nameField && !nameField.value) {
+                nameField.value = data.name;
+            }
         }
-    });
-    // Select first visible option
-    const first = modelSel.querySelector(`option[data-provider="${provider}"]`);
-    if (first) modelSel.value = first.value;
-}
-
-function updateProviderBadge() {
-    const badge = document.getElementById("active-provider");
-    if (badge) {
-        badge.textContent = currentProvider === "anthropic" ? "Anthropic" : "Mistral";
+    } catch (e) {
+        infoDiv.innerHTML = '<span class="text-danger">Lookup failed</span>';
     }
 }
 
-function saveSettings() {
-    const providerSel = document.getElementById("global-provider");
-    if (providerSel) {
-        currentProvider = providerSel.value;
-        localStorage.setItem("fs-provider", currentProvider);
-    }
-    // Toggle model groups in modal
-    const aGroup = document.getElementById("anthropic-models-group");
-    const mGroup = document.getElementById("mistral-models-group");
-    if (aGroup && mGroup) {
-        aGroup.classList.toggle("d-none", currentProvider !== "anthropic");
-        mGroup.classList.toggle("d-none", currentProvider !== "mistral");
-    }
-    updateProviderBadge();
-    // Also update skill page provider if present
-    const chatProvider = document.getElementById("chat-provider");
-    if (chatProvider) {
-        chatProvider.value = currentProvider;
-        filterModels(currentProvider);
-    }
+function formatNumber(n) {
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + "T";
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    return n.toLocaleString();
 }
 
-// ── Skill Submission ──
+/* ── Skill Execution ── */
 
-async function submitSkill(skillId) {
-    const msgEl = document.getElementById("user-message");
-    const message = msgEl ? msgEl.value.trim() : "";
-    const fileInput = document.getElementById("file-upload");
-    const provider = document.getElementById("chat-provider")?.value || currentProvider;
-    const model = document.getElementById("chat-model")?.value || "";
-
-    let fileContent = "";
-    if (fileInput && fileInput.files.length > 0) {
-        fileContent = await readFileContent(fileInput.files[0]);
-    }
-
-    if (!message && !fileContent) {
-        alert("Please enter a message or attach a file.");
+async function executeSkill(skillId) {
+    if (isStreaming) {
+        if (abortController) abortController.abort();
+        isStreaming = false;
+        updateSubmitButton(false);
         return;
     }
 
-    showLoading();
+    const provider = document.getElementById("provider-select")?.value || "anthropic";
+    const model = document.getElementById("model-select")?.value || "";
+
+    localStorage.setItem("fs_provider", provider);
+    localStorage.setItem("fs_model_" + provider, model);
+
+    // Collect form data
+    const formData = {};
+    const form = document.getElementById("skill-form");
+    if (form) {
+        for (const el of form.elements) {
+            if (el.name && el.name !== "" && el.type !== "file" && el.id !== "provider-select" && el.id !== "model-select") {
+                formData[el.name] = el.value;
+            }
+        }
+    }
+
+    // Read file content if present
+    let fileContent = "";
+    const fileInput = form?.querySelector('input[type="file"]');
+    if (fileInput?.files?.length) {
+        fileContent = await readFileContent(fileInput.files[0]);
+    }
+
+    // Show status
+    showStatus("Initializing…");
+    isStreaming = true;
+    updateSubmitButton(true);
 
     abortController = new AbortController();
 
     try {
-        const response = await fetch("/api/chat", {
+        const resp = await fetch("/api/execute", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 skill_id: skillId,
-                message: message,
-                provider: provider,
-                model: model || null,
+                form_data: formData,
+                provider,
+                model,
                 file_content: fileContent,
             }),
             signal: abortController.signal,
         });
 
-        if (!response.ok) {
-            const err = await response.json();
-            showError(err.error || "Request failed");
-            return;
-        }
-
-        showOutput();
-        isStreaming = true;
-        updateSubmitButton(true);
-
-        const reader = response.body.getReader();
+        const reader = resp.body.getReader();
         const decoder = new TextDecoder();
-        let fullText = "";
         let buffer = "";
+        let fullText = "";
+        let analysisStarted = false;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -142,119 +173,119 @@ async function submitSkill(skillId) {
 
             for (const line of lines) {
                 if (!line.startsWith("data: ")) continue;
-                const jsonStr = line.slice(6).trim();
-                if (!jsonStr) continue;
-
                 try {
-                    const data = JSON.parse(jsonStr);
-                    if (data.error) {
-                        showError(data.error);
-                        isStreaming = false;
-                        updateSubmitButton(false);
-                        return;
+                    const payload = JSON.parse(line.slice(6));
+
+                    if (payload.status) {
+                        updateStatus(payload.status);
                     }
-                    if (data.done) {
-                        isStreaming = false;
-                        updateSubmitButton(false);
+
+                    if (payload.chunk) {
+                        if (!analysisStarted) {
+                            analysisStarted = true;
+                            hideStatus();
+                            showOutput();
+                        }
+                        fullText += payload.chunk;
                         renderMarkdown(fullText);
-                        showMeta(provider, model || "(default)");
-                        return;
                     }
-                    if (data.chunk) {
-                        fullText += data.chunk;
-                        renderMarkdown(fullText, true);
+
+                    if (payload.done) {
+                        hideStatus();
+                        if (fullText) renderMarkdown(fullText, false);
                     }
-                } catch (e) {
-                    // skip malformed chunks
-                }
+
+                    if (payload.error) {
+                        showError(payload.error);
+                    }
+                } catch (e) { /* skip malformed lines */ }
             }
         }
-
-        // Stream ended without explicit done
-        isStreaming = false;
-        updateSubmitButton(false);
-        if (fullText) {
-            renderMarkdown(fullText);
-            showMeta(provider, model || "(default)");
+    } catch (e) {
+        if (e.name !== "AbortError") {
+            showError(e.message);
         }
-    } catch (err) {
-        if (err.name === "AbortError") {
-            showMeta(provider, "Cancelled");
-        } else {
-            showError(err.message);
-        }
+    } finally {
         isStreaming = false;
         updateSubmitButton(false);
     }
 }
 
-// ── File Reading ──
+/* ── File Reading ── */
 
-function readFileContent(file) {
+async function readFileContent(file) {
     return new Promise((resolve) => {
-        if (
-            file.type.startsWith("text/") ||
-            file.name.endsWith(".csv") ||
-            file.name.endsWith(".json") ||
-            file.name.endsWith(".md") ||
-            file.name.endsWith(".txt")
-        ) {
+        if (file.type.includes("text") || file.name.endsWith(".csv") ||
+            file.name.endsWith(".json") || file.name.endsWith(".md")) {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
             reader.readAsText(file);
         } else {
-            resolve(`[Binary file attached: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`);
+            resolve(`[Binary file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`);
         }
     });
 }
 
-// ── UI Helpers ──
+/* ── UI Helpers ── */
 
-function showLoading() {
-    hide("output-placeholder");
-    hide("output-content");
-    hide("output-error");
-    hide("output-meta");
-    show("output-loading");
+function showStatus(text) {
+    const placeholder = document.getElementById("output-placeholder");
+    const status = document.getElementById("output-status");
+    const content = document.getElementById("output-content");
+    const error = document.getElementById("output-error");
+
+    if (placeholder) placeholder.style.display = "none";
+    if (content) content.style.display = "none";
+    if (error) error.style.display = "none";
+    if (status) {
+        status.style.display = "block";
+        document.getElementById("status-text").textContent = text;
+    }
+}
+
+function updateStatus(text) {
+    const statusText = document.getElementById("status-text");
+    const steps = document.getElementById("data-steps");
+    if (statusText) statusText.textContent = text;
+
+    if (steps && text !== "Generating analysis…") {
+        const step = document.createElement("div");
+        step.className = "data-step done";
+        step.innerHTML = '<span class="step-icon"><i class="fas fa-check-circle"></i></span>' + escapeHtml(text);
+        steps.appendChild(step);
+    }
+}
+
+function hideStatus() {
+    const status = document.getElementById("output-status");
+    if (status) status.style.display = "none";
 }
 
 function showOutput() {
-    hide("output-placeholder");
-    hide("output-loading");
-    hide("output-error");
-    show("output-content");
+    const content = document.getElementById("output-content");
+    const copyBtn = document.getElementById("copy-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    if (content) content.style.display = "block";
+    if (copyBtn) copyBtn.style.display = "inline-block";
+    if (clearBtn) clearBtn.style.display = "inline-block";
 }
 
 function showError(msg) {
-    hide("output-placeholder");
-    hide("output-loading");
-    hide("output-content");
-    const el = document.getElementById("output-error");
-    if (el) {
-        el.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(msg)}`;
-        el.classList.remove("d-none");
+    const error = document.getElementById("output-error");
+    if (error) {
+        error.style.display = "block";
+        error.textContent = msg;
     }
+    hideStatus();
 }
 
-function showMeta(provider, model) {
-    const metaEl = document.getElementById("output-meta");
-    const textEl = document.getElementById("output-meta-text");
-    if (metaEl && textEl) {
-        textEl.textContent = `Provider: ${provider} | Model: ${model}`;
-        metaEl.classList.remove("d-none");
-    }
-}
-
-function renderMarkdown(text, streaming = false) {
+function renderMarkdown(text, streaming = true) {
     const el = document.getElementById("output-content");
     if (!el) return;
     el.innerHTML = marked.parse(text);
-    if (streaming) {
-        el.classList.add("streaming-cursor");
-    } else {
-        el.classList.remove("streaming-cursor");
-    }
-    // Auto-scroll
+    if (streaming) el.classList.add("streaming-cursor");
+    else el.classList.remove("streaming-cursor");
+
     const panel = document.getElementById("output-panel");
     if (panel) panel.scrollTop = panel.scrollHeight;
 }
@@ -271,8 +302,8 @@ function updateSubmitButton(streaming) {
             updateSubmitButton(false);
         };
     } else {
-        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Generate';
-        btn.onclick = () => submitSkill(skillId);
+        btn.innerHTML = '<i class="fas fa-play me-2"></i>Run Analysis';
+        btn.onclick = () => executeSkill(skillId);
     }
 }
 
@@ -280,37 +311,35 @@ function copyOutput() {
     const el = document.getElementById("output-content");
     if (!el) return;
     navigator.clipboard.writeText(el.innerText).then(() => {
-        // Brief visual feedback
-        const btn = el.closest(".card").querySelector('[onclick="copyOutput()"]');
+        const btn = document.getElementById("copy-btn");
         if (btn) {
             const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i>';
-            setTimeout(() => (btn.innerHTML = orig), 1500);
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied';
+            setTimeout(() => { btn.innerHTML = orig; }, 1500);
         }
     });
 }
 
 function clearOutput() {
-    hide("output-content");
-    hide("output-error");
-    hide("output-meta");
-    show("output-placeholder");
-    const el = document.getElementById("output-content");
-    if (el) el.innerHTML = "";
+    const content = document.getElementById("output-content");
+    const placeholder = document.getElementById("output-placeholder");
+    const error = document.getElementById("output-error");
+    const status = document.getElementById("output-status");
+    const steps = document.getElementById("data-steps");
+    const copyBtn = document.getElementById("copy-btn");
+    const clearBtn = document.getElementById("clear-btn");
+
+    if (content) { content.style.display = "none"; content.innerHTML = ""; }
+    if (placeholder) placeholder.style.display = "block";
+    if (error) error.style.display = "none";
+    if (status) status.style.display = "none";
+    if (steps) steps.innerHTML = "";
+    if (copyBtn) copyBtn.style.display = "none";
+    if (clearBtn) clearBtn.style.display = "none";
 }
 
-function show(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove("d-none");
-}
-
-function hide(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.add("d-none");
-}
-
-function escapeHtml(str) {
+function escapeHtml(text) {
     const div = document.createElement("div");
-    div.textContent = str;
+    div.textContent = text;
     return div.innerHTML;
 }

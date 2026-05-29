@@ -1,113 +1,189 @@
 {% extends "base.html" %}
-{% block title %}{{ skill.display_name }} — Financial Services AI{% endblock %}
+{% block title %}{{ skill.display_name }} — FS Workbench{% endblock %}
 
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="/vertical/{{ skill.vertical }}">{{ meta.get('label', skill.vertical_display) }}</a></li>
-        <li class="breadcrumb-item active">{{ skill.display_name }}</li>
-    </ol>
-</nav>
-
-<div class="row">
-    <!-- Input Panel -->
-    <div class="col-lg-5 col-xl-4">
-        <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
-            <div class="card-header text-white" style="background: {{ meta.get('color', '#333') }};">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-{{ meta.get('icon', 'cog') }} me-2"></i>
-                    <strong>{{ skill.display_name }}</strong>
-                    {% if skill.command %}
-                    <code class="ms-auto text-light opacity-75">{{ skill.command }}</code>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small mb-3">{{ skill.description[:200] }}</p>
-
-                <form id="skill-form" onsubmit="return false;">
-                    <!-- Provider & Model Selection -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Provider</label>
-                            <select class="form-select form-select-sm" id="chat-provider">
-                                <option value="anthropic">Anthropic</option>
-                                <option value="mistral">Mistral</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Model</label>
-                            <select class="form-select form-select-sm" id="chat-model">
-                                {% for m in models.get('anthropic', []) %}
-                                <option value="{{ m }}" data-provider="anthropic">{{ m.split('-')[1]|title }} {{ m.split('-')[2] if m.split('-')|length > 2 else '' }}</option>
-                                {% endfor %}
-                                {% for m in models.get('mistral', []) %}
-                                <option value="{{ m }}" data-provider="mistral" class="d-none">{{ m.replace('-', ' ')|title }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- User Input -->
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Your Request</label>
-                        <textarea class="form-control" id="user-message" rows="6"
-                                  placeholder="{{ input_hint }}"></textarea>
-                    </div>
-
-                    <!-- File Upload -->
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">
-                            <i class="fas fa-paperclip me-1"></i>Attach Document (optional)
-                        </label>
-                        <input type="file" class="form-control form-control-sm" id="file-upload"
-                               accept=".txt,.csv,.json,.md,.xlsx,.pdf">
-                        <div class="form-text">Text/CSV/JSON files are read directly. For best results, paste content into the text area.</div>
-                    </div>
-
-                    <!-- Submit -->
-                    <button type="button" class="btn w-100 text-white" id="submit-btn"
-                            style="background: {{ meta.get('color', '#333') }};"
-                            data-skill-id="{{ skill.skill_id }}"
-                            onclick="submitSkill('{{ skill.skill_id }}')">
-                        <i class="fas fa-paper-plane me-2"></i>Generate
-                    </button>
-                </form>
-            </div>
+<div class="container-fluid py-4">
+    <div class="row px-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/vertical/{{ skill.vertical }}">{{ meta.get('label', skill.vertical_display) }}</a></li>
+                    <li class="breadcrumb-item active">{{ skill.display_name }}</li>
+                </ol>
+            </nav>
         </div>
     </div>
 
-    <!-- Output Panel -->
-    <div class="col-lg-7 col-xl-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-dark text-light d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-file-alt me-2"></i>Output</span>
-                <div>
-                    <button class="btn btn-outline-light btn-sm me-1" onclick="copyOutput()" title="Copy to clipboard">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                    <button class="btn btn-outline-light btn-sm" onclick="clearOutput()" title="Clear">
-                        <i class="fas fa-trash"></i>
-                    </button>
+    <div class="row px-3 g-4">
+        <!-- Input Panel -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm sticky-panel">
+                <div class="card-header text-white py-3" style="background: {{ meta.get('color', '#333') }};">
+                    <h5 class="mb-1"><i class="fas fa-{{ meta.get('icon', 'cog') }} me-2"></i>{{ skill.display_name }}</h5>
+                    <small class="opacity-75">{{ skill.description[:120] }}{% if skill.description|length > 120 %}…{% endif %}</small>
+                </div>
+                <div class="card-body">
+                    <form id="skill-form" onsubmit="return false;">
+                        <!-- LLM Provider/Model Selection -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Provider</label>
+                                <select class="form-select form-select-sm" id="provider-select" onchange="onProviderChange()">
+                                    <option value="anthropic">Anthropic</option>
+                                    <option value="mistral">Mistral</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Model</label>
+                                <select class="form-select form-select-sm" id="model-select">
+                                    {% for mid, mlabel in anthropic_models %}
+                                    <option value="{{ mid }}" data-provider="anthropic">{{ mlabel }}</option>
+                                    {% endfor %}
+                                    {% for mid, mlabel in mistral_models %}
+                                    <option value="{{ mid }}" data-provider="mistral" style="display:none;">{{ mlabel }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="my-2">
+
+                        <!-- Dynamic Form Fields -->
+                        {% for field in skill.fields %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold" for="field-{{ field.name }}">
+                                {% if field.field_type == 'ticker' %}<i class="fas fa-chart-line me-1"></i>
+                                {% elif field.field_type == 'tickers' %}<i class="fas fa-users me-1"></i>
+                                {% elif field.field_type == 'file' %}<i class="fas fa-paperclip me-1"></i>
+                                {% elif field.field_type == 'number' %}<i class="fas fa-hashtag me-1"></i>
+                                {% elif field.field_type == 'select' %}<i class="fas fa-list me-1"></i>
+                                {% endif %}
+                                {{ field.label }}
+                                {% if not field.required %}<span class="text-muted fw-normal">(optional)</span>{% endif %}
+                            </label>
+
+                            {% if field.field_type == 'textarea' %}
+                            <textarea class="form-control form-control-sm" id="field-{{ field.name }}"
+                                      name="{{ field.name }}" rows="3"
+                                      placeholder="{{ field.placeholder }}"
+                                      {{ 'required' if field.required else '' }}></textarea>
+
+                            {% elif field.field_type == 'select' %}
+                            <select class="form-select form-select-sm" id="field-{{ field.name }}"
+                                    name="{{ field.name }}" {{ 'required' if field.required else '' }}>
+                                {% for opt in field.options %}
+                                <option value="{{ opt }}">{{ opt }}</option>
+                                {% endfor %}
+                            </select>
+
+                            {% elif field.field_type == 'file' %}
+                            <input type="file" class="form-control form-control-sm" id="field-{{ field.name }}"
+                                   name="{{ field.name }}" accept=".txt,.csv,.json,.md,.xlsx,.pdf">
+                            {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+
+                            {% elif field.field_type == 'ticker' %}
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="field-{{ field.name }}"
+                                       name="{{ field.name }}" placeholder="{{ field.placeholder }}"
+                                       {{ 'required' if field.required else '' }}
+                                       style="text-transform: uppercase;">
+                                <button class="btn btn-outline-secondary" type="button"
+                                        onclick="lookupTicker('{{ field.name }}')" title="Lookup ticker">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="ticker-info small text-muted mt-1" id="ticker-info-{{ field.name }}"></div>
+
+                            {% elif field.field_type == 'tickers' %}
+                            <input type="text" class="form-control form-control-sm" id="field-{{ field.name }}"
+                                   name="{{ field.name }}" placeholder="{{ field.placeholder }}"
+                                   {{ 'required' if field.required else '' }}
+                                   style="text-transform: uppercase;">
+                            <div class="form-text">Separate multiple tickers with commas</div>
+
+                            {% elif field.field_type == 'number' %}
+                            <input type="number" step="any" class="form-control form-control-sm"
+                                   id="field-{{ field.name }}" name="{{ field.name }}"
+                                   placeholder="{{ field.placeholder }}"
+                                   {{ 'required' if field.required else '' }}>
+
+                            {% else %}
+                            <input type="text" class="form-control form-control-sm" id="field-{{ field.name }}"
+                                   name="{{ field.name }}" placeholder="{{ field.placeholder }}"
+                                   {{ 'required' if field.required else '' }}>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <!-- Data Sources Indicator -->
+                        {% if skill.data_needs %}
+                        <div class="alert alert-info py-2 px-3 small mb-3">
+                            <i class="fas fa-bolt me-1"></i><strong>Auto-fetched data:</strong>
+                            {% for need in skill.data_needs %}
+                            <span class="badge bg-white text-dark border ms-1">
+                                {% if need == 'company_data' %}Company Profile
+                                {% elif need == 'financials' %}Financial Statements
+                                {% elif need == 'news' %}Recent News
+                                {% elif need == 'web_search' %}Web Research
+                                {% elif need == 'peers' %}Peer Comparison
+                                {% elif need == 'earnings' %}Earnings Data
+                                {% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit -->
+                        <button type="button" class="btn w-100 text-white fw-bold" id="submit-btn"
+                                style="background: {{ meta.get('color', '#333') }};"
+                                data-skill-id="{{ skill.skill_id }}"
+                                onclick="executeSkill('{{ skill.skill_id }}')">
+                            <i class="fas fa-play me-2"></i>Run Analysis
+                        </button>
+                    </form>
                 </div>
             </div>
-            <div class="card-body output-panel" id="output-panel">
-                <div class="text-center text-muted py-5" id="output-placeholder">
-                    <i class="fas fa-lightbulb fa-3x mb-3 opacity-50"></i>
-                    <p>Enter your request and click <strong>Generate</strong> to get started.</p>
-                    <p class="small">The AI will follow the <em>{{ skill.display_name }}</em> workflow from the financial services skill library.</p>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-white">
+                    <div>
+                        <strong><i class="fas fa-file-alt me-2"></i>Output</strong>
+                        <span class="badge bg-secondary ms-2" id="status-badge" style="display:none;"></span>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyOutput()" id="copy-btn"
+                                style="display:none;" title="Copy to clipboard">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="clearOutput()" id="clear-btn"
+                                style="display:none;" title="Clear output">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
-                <div id="output-content" class="d-none markdown-body"></div>
-                <div id="output-loading" class="d-none text-center py-4">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2 text-muted">Generating analysis...</p>
+                <div class="card-body" id="output-panel" style="min-height: 500px; max-height: 80vh; overflow-y: auto;">
+                    <div id="output-placeholder" class="text-center text-muted py-5">
+                        <i class="fas fa-chart-bar fa-3x mb-3 opacity-25"></i>
+                        <p>Fill in the form and click <strong>Run Analysis</strong> to generate output.</p>
+                        <p class="small">The system will automatically fetch real-time market data,<br>
+                        financial statements, and news before running the AI analysis.</p>
+                    </div>
+                    <div id="output-status" style="display:none;">
+                        <div class="d-flex align-items-center text-muted mb-3">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <span id="status-text">Gathering data…</span>
+                        </div>
+                        <div id="data-steps" class="small text-muted"></div>
+                    </div>
+                    <div id="output-content" class="markdown-body" style="display:none;"></div>
+                    <div id="output-error" class="alert alert-danger" style="display:none;"></div>
                 </div>
-                <div id="output-error" class="d-none alert alert-danger"></div>
-            </div>
-            <div class="card-footer bg-dark text-muted small d-none" id="output-meta">
-                <i class="fas fa-info-circle me-1"></i>
-                <span id="output-meta-text"></span>
             </div>
         </div>
     </div>

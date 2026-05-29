@@ -1,13 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Not Found — Financial Services AI{% endblock %}
-
+{% block title %}Not Found{% endblock %}
 {% block content %}
-<div class="text-center py-5">
-    <i class="fas fa-exclamation-triangle fa-4x text-warning mb-4"></i>
-    <h2>404 — {{ message }}</h2>
-    <p class="text-muted">The page you're looking for doesn't exist.</p>
-    <a href="/" class="btn btn-primary mt-3">
-        <i class="fas fa-home me-2"></i>Back to Dashboard
-    </a>
+<div class="container py-5 text-center">
+    <h1 class="display-1 text-muted">404</h1>
+    <p class="lead">{{ message or "Page not found" }}</p>
+    <a href="/" class="btn btn-primary">Back to Dashboard</a>
 </div>
 {% endblock %}

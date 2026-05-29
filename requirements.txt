@@ -4,3 +4,5 @@ mistralai==1.6.0
 python-dotenv==1.1.0
 markdown==3.8
 gunicorn==23.0.0
+yfinance==1.4.1
+duckduckgo-search==8.1.1

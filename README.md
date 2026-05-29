@@ -1,30 +1,32 @@
 # Financial Services AI Workbench
 
-A Python web application that implements all 52 financial services skills from the [anthropics/financial-services](https://github.com/anthropics/financial-services) repository, with dual LLM support (Anthropic Claude & Mistral AI).
+A Python web application that implements 55 professional financial analysis tools powered by real-time market data and dual LLM support (Anthropic Claude & Mistral AI).
+
+Each tool is a real functional feature — enter a company ticker and the app automatically fetches live financials, news, and market data from Yahoo Finance and web search, then runs AI-powered analysis following institutional workflows from the [anthropics/financial-services](https://github.com/anthropics/financial-services) skill library.
 
 ## Features
 
-- **52 Professional Skills** across 7 financial verticals:
-  - Financial Analysis (13 skills) — comps, DCF, LBO, 3-statement, Excel audit, etc.
-  - Investment Banking (9 skills) — CIMs, teasers, merger models, pitch decks, etc.
-  - Equity Research (9 skills) — earnings analysis, initiating coverage, sector overviews, etc.
-  - Private Equity (10 skills) — deal sourcing, IC memos, returns analysis, etc.
-  - Wealth Management (6 skills) — financial plans, rebalancing, TLH, etc.
-  - Fund Administration (6 skills) — GL reconciliation, accruals, NAV tie-out, etc.
-  - Operations (2 skills) — KYC document parsing and rules evaluation
+- **55 Functional Tools** across 7 financial verticals:
+  - **Equity Research** — earnings analysis, pre-earnings previews, initiating coverage, model updates, morning notes, sector overviews, thesis tracking, catalyst calendars, idea generation
+  - **Financial Analysis** — comparable company analysis, DCF models, LBO models, 3-statement models, competitive analysis, Excel audit, data cleaning
+  - **Investment Banking** — one-pagers, pitch decks, CIMs, teasers, buyer lists, merger models, process letters, deal tracking
+  - **Private Equity** — deal sourcing, screening, DD checklists, unit economics, returns analysis, IC memos, portfolio monitoring, value creation plans
+  - **Wealth Management** — client reviews, financial plans, rebalancing, investment proposals, tax-loss harvesting
+  - **Fund Administration** — GL reconciliation, break tracing, accruals, roll-forwards, variance commentary, NAV tie-out
+  - **Operations** — KYC document parsing and rules evaluation
 
-- **Dual LLM Support** — Switch between Anthropic Claude and Mistral AI models
-- **Streaming Responses** — Real-time output with Server-Sent Events
-- **File Upload** — Attach documents for skills that process files (KYC, GL data, etc.)
-- **Responsive UI** — Clean Bootstrap 5 interface organized by financial vertical
-- **Markdown Rendering** — Professional output with tables, code blocks, and formatting
+- **Real-Time Data Fetching** — Yahoo Finance for financials, DuckDuckGo search for news and web research
+- **Structured Input Forms** — each tool has dedicated fields (ticker lookup, financial parameters, peer groups, etc.)
+- **Dual LLM Support** — switch between Anthropic Claude and Mistral AI models
+- **Streaming Responses** — real-time output with live data gathering status
+- **Ticker Lookup** — instant company info when you enter a ticker symbol
 
 ## Quick Start
 
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/FernandoBenayas/financial-services-app.git
+git clone <this-repo>
 cd financial-services-app
 
 # Clone the skills repo (required for skill definitions)
@@ -42,7 +44,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys:
+# Edit .env — you need at least one:
 #   ANTHROPIC_API_KEY=sk-ant-...
 #   MISTRAL_API_KEY=...
 ```
@@ -55,60 +57,33 @@ python run.py
 
 Visit [http://localhost:5000](http://localhost:5000)
 
-### Production
+## How It Works
 
-```bash
-gunicorn "app.main:create_app()" --bind 0.0.0.0:8000 --workers 4
-```
+1. **Choose a tool** from the dashboard (organized by financial vertical)
+2. **Fill in the structured form** — enter company tickers, financial parameters, or context
+3. **Auto-fetch data** — the app queries Yahoo Finance for financials, plus DuckDuckGo for recent news and web research
+4. **AI analysis** — all gathered data + the skill's institutional workflow are sent to the LLM, which produces professional-quality output
+5. **Streaming results** — output renders in real-time with markdown formatting, tables, and charts
 
 ## Architecture
 
 ```
-financial-services-app/
-├── app/
-│   ├── __init__.py
-│   ├── main.py            # Flask app, routes, SSE streaming
-│   ├── llm.py             # LLM connectors (Anthropic + Mistral)
-│   ├── skills.py          # Skills registry, loads SKILL.md files
-│   ├── static/
-│   │   ├── css/style.css  # Custom styles
-│   │   └── js/app.js      # Client-side streaming & UI logic
-│   └── templates/
-│       ├── base.html      # Layout with nav, settings modal
-│       ├── index.html     # Dashboard with vertical cards
-│       ├── vertical.html  # Skills listing per vertical
-│       ├── skill.html     # Individual skill page with chat
-│       └── 404.html
-├── run.py                 # Dev entry point
-├── requirements.txt
-├── .env.example
-└── README.md
+app/
+├── main.py          # Flask routes, SSE streaming, context building
+├── llm.py           # Anthropic + Mistral connectors with streaming
+├── skills.py        # Skill registry with structured form definitions
+├── data_fetcher.py  # Yahoo Finance + DuckDuckGo data fetching
+├── static/          # CSS, JavaScript
+└── templates/       # Jinja2 templates (dashboard, vertical, skill pages)
 ```
-
-## How It Works
-
-1. **Skills Registry** (`app/skills.py`) scans the `financial-services/plugins/vertical-plugins/` directory and loads every `SKILL.md` file with its frontmatter metadata.
-
-2. **LLM Connectors** (`app/llm.py`) provide a unified interface to both Anthropic and Mistral APIs with streaming support.
-
-3. **Flask App** (`app/main.py`) serves the web UI and exposes an `/api/chat` SSE endpoint that:
-   - Takes a skill ID, user message, provider, and model
-   - Builds a system prompt from the skill's full SKILL.md content
-   - Streams the LLM response back to the browser
-
-4. **Client JS** (`app/static/js/app.js`) handles streaming, markdown rendering, provider switching, and file upload.
 
 ## Supported Models
 
-### Anthropic
-- Claude Sonnet 4 (`claude-sonnet-4-20250514`)
-- Claude Haiku 4 (`claude-haiku-4-20250414`)
-
-### Mistral
-- Mistral Large (`mistral-large-latest`)
-- Mistral Small (`mistral-small-latest`)
-- Mistral Nemo (`open-mistral-nemo`)
+| Provider | Models |
+|----------|--------|
+| Anthropic | Claude Sonnet 4, Claude Haiku 4 |
+| Mistral | Mistral Large, Mistral Small, Mistral Nemo |
 
 ## License
 
-Apache License 2.0 — Skills content from [anthropics/financial-services](https://github.com/anthropics/financial-services).
+Apache License 2.0 — Skill workflows from [anthropics/financial-services](https://github.com/anthropics/financial-services).
